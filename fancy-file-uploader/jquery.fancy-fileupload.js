@@ -1,6 +1,8 @@
 // jQuery plugin to display a custom jQuery File Uploader interface.
 // (C) 2017 CubicleSoft.  All Rights Reserved.
 
+"use strict";
+
 (function($) {
 	var EscapeHTML = function(text) {
 		var map = {
@@ -12,7 +14,7 @@
 		};
 
 		return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-	}
+	};
 
 	var FormatStr = function(format) {
 		var args = Array.prototype.slice.call(arguments, 1);
@@ -147,10 +149,10 @@
 			if (active.length || queued.length)
 			{
 				active.removeClass('ff_fileupload_bounce');
-				setTimeout(function() { active.addClass('ff_fileupload_bounce') }, 250);
+				setTimeout(function() { active.addClass('ff_fileupload_bounce'); }, 250);
 
 				queued.removeClass('ff_fileupload_bounce');
-				setTimeout(function() { queued.addClass('ff_fileupload_bounce') }, 250);
+				setTimeout(function() { queued.addClass('ff_fileupload_bounce'); }, 250);
 
 				if (active.length)  return Translate('There is a file upload still in progress.  Leaving the page will cancel the upload.\n\nAre you sure you want to leave this page?');
 				if (queued.length)  return Translate('There is a file that was added to the queue but the upload has not been started.  Leaving the page will clear the queue and not upload the file.\n\nAre you sure you want to leave this page?');
@@ -218,13 +220,39 @@
 				inforow.removeClass('ff_fileupload_queued');
 				inforow.addClass('ff_fileupload_starting');
 
-				var SubmitUpload = function() {
+				var SubmitUpload = function()
+				{
+					var form = $('#'+settings.fileinputname+'_form');
+
+					if (!form.length) { data.ff_info.errors.push(Translate('Could not find form to apply parameters.')); }
+					else {
+						// Delete old hidden input elements.
+						form.find(':input').filter(':hidden').remove();
+
+						// Append new hidden input elements for the params.
+						for (var x in settings.params)
+						{
+							if (settings.params.hasOwnProperty(x))
+							{
+								var input = $('<input>').attr({
+									'type' : 'hidden',
+									'name' : x,
+									'value' : settings.params[x]
+								});
+
+								form.append(input);
+							}
+						}
+						data.form = form;
+					}
+
 					inforow.removeClass('ff_fileupload_starting');
 					inforow.addClass('ff_fileupload_uploading');
 					data.submit();
 				};
 
-				if (settings.startupload)  settings.startupload.call(inforow, SubmitUpload, e, data);
+				// Let custom callback make last second changes to the params.
+				if (settings.startupload)  settings.startupload.call(inforow, SubmitUpload, e, data, settings);
 				else  SubmitUpload();
 			};
 
@@ -525,29 +553,19 @@
 				'method' : 'post',
 				'enctype' : 'multipart/form-data'
 			});
-			$('body').append(form);
+			$this.after(form); // Keep the form within the parent of the placeholder input for garbage collection if this uploader is removed
 
-			// Append hidden input elements.
-			for (var x in settings.params)
-			{
-				if (settings.params.hasOwnProperty(x))
-				{
-					var input = $('<input>').attr({
-						'type' : 'hidden',
-						'name' : x,
-						'value' : settings.params[x]
-					});
-
-					form.append(input);
-				}
-			}
+			// Deferred adding the param inputs to SubmitUpload function for contextual run-time updating
 
 			// Append a file input element.
-			var fileinputname = $this.attr('name');
-			var fileinput = $('<input>').attr({
-				'type' : 'file',
-				'name' : (fileinputname ? fileinputname : 'file')
-			});
+			var fileinput = $('<input>').attr({'type' : 'file'});
+			form.append(fileinput);
+
+			// Name/ID the form and the file input
+			settings.fileinputname = $this.attr('name')? $this.attr('name') : 'file';
+			fileinput.attr('name', settings.fileinputname); 
+			form.attr('id', settings.fileinputname+'_form');
+			
 			if ($this.prop('multiple'))  fileinput.prop('multiple', true);
 
 			// Process the accepted file extensions.
@@ -567,8 +585,6 @@
 					}
 				}
 			}
-
-			form.append(fileinput);
 
 			// Insert the widget wrapper.
 			var fileuploadwrap = $('<div>').addClass('ff_fileupload_wrap');
@@ -604,7 +620,7 @@
 			var immutableoptions = {
 				singleFileUploads: true,
 				dropZone: dropzone,
-				add: function(e, data) { AddFile(uploads, e, data) },
+				add: function(e, data) { AddFile(uploads, e, data); },
 				progress: UploadProgress,
 				fail: UploadFailed,
 				done: UploadDone,
@@ -621,7 +637,7 @@
 				'form' : form
 			});
 		});
-	}
+	};
 
 	$.fn.FancyFileUpload.defaults = {
 		'url' : '',
