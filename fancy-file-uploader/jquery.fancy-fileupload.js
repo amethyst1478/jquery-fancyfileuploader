@@ -362,12 +362,27 @@
 
 			if (settings.maxfilesize > -1 && data.files[0].size > settings.maxfilesize)  data.ff_info.errors.push(FormatStr(Translate('File is too large.  Maximum file size is {0}.'), GetDisplayFilesize(settings.maxfilesize, settings.adjustprecision, settings.displayunits)));
 
+			// Sanitize the filename on add
+			if (settings.sanitize)
+			{
+				filename = settings.sanitize.call(this, filename);
+				if (!filename)  data.ff_info.errors.push(Translate('Sanitize function did not return a valid filename.'));
+			}
+
 			// Filename text field/display.
 			if (settings.edit && !data.ff_info.errors.length)
 			{
 				inforow.find('.ff_fileupload_filename').append($('<input>').attr('type', 'text').val(filename).keydown(function(e) {
 					// Start uploading if someone presses enter.
 					if (e.keyCode == 13)  StartUpload(e);
+				})
+				.blur(function(e) {
+					// Sanitize the filename when the input field loses focus
+					if (settings.sanitize)
+					{
+						$(e.target).val( settings.sanitize.call(this,$(e.target).val()) );
+						if (!$(this).val()) { data.ff_info.errors.push(Translate('Sanitize function did not return a valid filename.')); }
+					}
 				}));
 			}
 			else
@@ -661,6 +676,7 @@
 		'uploadcompleted' : null,
 		'fileupload' : {},
 		'langmap' : {},
-		'multionly' : 0
+		'multionly' : 0,
+		'sanitize' : null
 	};
 }(jQuery));
