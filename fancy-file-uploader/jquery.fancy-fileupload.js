@@ -591,8 +591,10 @@
 			$this.after(fileuploadwrap);
 
 			// Insert a new dropzone.  Using a button allows for standard keyboard and mouse navigation to the element.  The wrapper is for paste support.
-			var dropzonewrap = $('<div>').addClass('ff_fileupload_dropzone_wrap');
-			var dropzone = $('<button>').addClass('ff_fileupload_dropzone').attr('type', 'button').attr('aria-label', Translate('Browse, drag-and-drop, or paste files to upload'));
+			var dropzoneclass = $this.attr('value')? 'ff_fileupload_button' : 'ff_fileupload_dropzone';
+			var dropzonewrap = $('<div>').addClass(dropzoneclass+'_wrap');
+			var dropzone = $('<button>').addClass(dropzoneclass).attr('type', 'button').attr('aria-label', Translate('Browse, drag-and-drop, or paste files to upload'));
+			if ($this.attr('value')) { dropzone.html($this.attr('value')); }
 			dropzonewrap.append(dropzone);
 			fileuploadwrap.append(dropzonewrap);
 			dropzone.on('click.fancy_fileupload', function(e) {
