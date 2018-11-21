@@ -19,7 +19,7 @@ Features
 * Beautiful and fully responsive layout.
 * Drag-and-drop dropzone with paste support.
 * Full keyboard navigation.
-* Client-side file naming.
+* Client-side file naming with auto-sanitizing.
 * Preview support for images, audio, and video.
 * Chunked file upload support.
 * Lots of useful callbacks.
@@ -67,6 +67,14 @@ $(function() {
 });
 </script>
 ```
+
+If you don't have the page realestate available to support the large dropzone and instead want a regular upload button, but still retain all of the other fancy features, simply add a value to the input element, and that value will be the text of the button:
+
+```html
+<input id="thefiles" type="file" name="files" accept=".jpg, .png, image/jpeg, image/png" multiple value="Upload File">
+```
+
+Drag-and-drop is still available on the smaller button.
 
 Other than handling the files on the server side of things and leveraging the various callbacks, that's pretty much it for basic usage.
 
@@ -178,6 +186,8 @@ It is possible to add a button to the screen to start all of the uploads at once
 <button type="button" onclick="$('#thefiles').next().find('.ff_fileupload_actions button.ff_fileupload_start_upload').click(); return false;">Upload all files</button>
 ```
 
+To hide per-file upload buttons and force all pending uploads to only go through the above external button, pass the option "multionly: true" to the FancyFileUpload() constructor.
+
 The specialized function `data.ff_info.RemoveFile()` can be used at any time to remove a file from the list which will immediately abort any upload in progress, remove the associated UI elements, and clean up internal structures:
 
 ```html
@@ -190,6 +200,7 @@ $(function() {
 			action : 'fileuploader'
 		},
 		maxfilesize : 1000000,
+		multionly : true,
 		startupload : function(SubmitUpload, e, data) {
 			$.ajax({
 				'url' : 'gettoken.php',
@@ -210,6 +221,33 @@ $(function() {
 		uploadcompleted : function(e, data) {
 			data.ff_info.RemoveFile();
 		}
+	});
+});
+</script>
+```
+
+To sanitize filenames when they're added or changed client-side, pass in a sanitize callback.  This function accepts the filename as a parameter and requires a filename to be returned.  This provides an opportunity to modify any filename according to your particular standards, such as stripping out special characters that will cause errors on your server's file system or database, forcing length restrictions, or appending a timestamp.
+
+```html
+<script type="text/javascript">
+$(function() {
+	$('#thefiles').FancyFileUpload({
+		params : {
+			action : 'fileuploader'
+		},
+		edit : true,
+		sanitize: function (filename) // return a valid filename whenever a file is added or changed
+		{
+			console.log("Sanitizing filename "+filename);
+			filename = String(filename).replace(/\s/gm,"_");		// replace spaces with underscores
+			filename = String(filename).replace(/[^A-Za-z0-9_\-.]/gm,"");	// remove anything not valid in a filename
+			if (!filename) {						// handle an empty string
+				console.log("No filename found, so adding a default.");
+				let date = new Date();
+				filename = "file_"+date.getFullYear()+"-"+date.getMonth()+"-"+date.getDate()+"_"+date.getHours()+"-"+date.getMinutes()+"-"+date.getSeconds(); }
+			console.log("Sanitized filename to "+filename);
+			return filename;
+		},
 	});
 });
 </script>
@@ -258,6 +296,8 @@ This plugin accepts the following options:
 * uploadcompleted - A valid callback function that is called whenever an upload has successfully completed.  The callback function must accept two parameters - callback(e, data).
 * fileupload - An object containing [jQuery File Upload options](https://github.com/blueimp/jQuery-File-Upload/wiki/Options) (Default is an empty object).  The following options are immutable cannot be changed:  `singleFileUploads` (always true), `dropZone`, `add`, `progress`, `fail`, `done`, `chunksend`, and `chunkdone`.  The `dataType` option must be 'json' (the default) or 'jsonp' as the plugin depends on a valid JSON response for correct operation.
 * langmap - An object containing translation strings.  Support exists for most of the user interface (Default is an empty object).
+* multionly - A boolean that disables per-file upload buttons when true.
+* sanitize - A valid callback function that is called whenever a file is added or a filename has changed client-side (triggers on blur).  Accepts a filename as a parameter and must return a filename.
 
 All callbacks have a `this` containing the jQuery object for the current UI table row.  Use the jQuery `this.find(selector)` syntax to locate relevant UI elements.
 
